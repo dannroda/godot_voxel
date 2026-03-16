@@ -66,7 +66,7 @@ jobs:
           sudo swapoff -a
           sudo rm -f /swapfile
           sudo apt-get clean
-          docker rmi $(docker image ls -aq)
+          docker image ls -aq | xargs -r docker rmi
           df -h
 
       # NO-PIE is for more detailed bactraces with line symbols
