@@ -12,7 +12,7 @@ concurrency:
 # Global Cache Settings
 env:
   # TODO Poke qarmin to update Qarminer and stuff
-  GODOT_BASE_BRANCH: "4.2"
+  GODOT_BASE_BRANCH: "4.6"
   SCONS_CACHE_LIMIT: 4096
   GODOT_BINARY_NAME: godot.linuxbsd.editor.dev.x86_64.san
 
@@ -27,6 +27,11 @@ jobs:
         with:
           repository: godotengine/godot
           ref: ${{ env.GODOT_BASE_BRANCH }}
+
+      - name: Apply PR 117224
+        run: |
+          curl -LO https://github.com/godotengine/godot/pull/117224.patch
+          git apply 117224.patch
 
       # Clone our module under the correct directory
       - uses: actions/checkout@v4

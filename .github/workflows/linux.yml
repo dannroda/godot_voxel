@@ -21,21 +21,21 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: 4.6 Template
+          - name: 4.6.2-dev Template
             precision: double
             target: template_release
             production: yes
             executable_name: godot.linuxbsd.template_release.double.x86_64
-            godot_base_branch: "4.6-stable"
+            godot_base_branch: "4.6"
             warnings: extra
             werror: yes
 
-          - name: 4.6 Editor Float64
+          - name: 4.6.2-dev Editor Float64
             precision: double
             target: editor
             production: yes
             executable_name: godot.linuxbsd.editor.double.x86_64
-            godot_base_branch: "4.6-stable"
+            godot_base_branch: "4.6"
             warnings: extra
             werror: yes
 
@@ -45,6 +45,11 @@ jobs:
         with:
           repository: godotengine/godot
           ref: ${{ matrix.godot_base_branch }}
+
+      - name: Apply PR 117224
+        run: |
+          curl -LO https://github.com/godotengine/godot/pull/117224.patch
+          git apply 117224.patch
 
       # Clone our module under the correct directory
       - uses: actions/checkout@v4
