@@ -25,12 +25,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: 4.6 Editor Float64
+          - name: 4.6.1 Editor Float64
             target: editor
             precision: double
             executable_name: godot.windows.editor.double.x86_64.exe
 
-          - name: 4.6 Template
+          - name: 4.6.1 Template
             target: template_release
             precision: double
             executable_name: godot.windows.template_release.double.x86_64.exe

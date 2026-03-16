@@ -1,4 +1,4 @@
-name: 🍎 macOS & iOS Builds
+name: 🍎 macOS Builds
 on:
   push:
     branches: [ ci ]
@@ -24,13 +24,13 @@ jobs:
         arch: [x86_64, arm64]
         target: [editor, template_release]
         include:
-          - name: 4.6 Editor Float64
+          - name: 4.6.1 Editor Float64
             target: editor
             precision: double
             executable_name: godot.macos.editor.double
             godot_base_branch: "4.6.1-stable"
 
-          - name: 4.6 Template
+          - name: 4.6.1 Template
             target: template_release
             precision: double
             executable_name: godot.macos.template_release.double
@@ -165,58 +165,3 @@ jobs:
         with:
           name: godot.macos.template.app
           path: macos_template.app.zip
-
-  ios-template:
-    runs-on: "macos-latest"
-    name: iOS Template Build
-
-    steps:
-      # Clone Godot
-      - uses: actions/checkout@v4
-        with:
-          repository: godotengine/godot
-          ref: "4.6.1-stable"
-
-      # Select Xcode
-      - name: Select Xcode 16
-        run: sudo xcode-select -s /Applications/Xcode_16.2.app
-
-      # Clone our module under the correct directory
-      - uses: actions/checkout@v4
-        with:
-          path: modules/voxel
-
-      # Upload cache on completion and check it out now
-      - name: Load .scons_cache directory
-        uses: actions/cache@v4
-        with:
-          path: ${{github.workspace}}/.scons_cache/
-          key: godot.ios.template_release.double.arm64-4.6.1-stable-${{github.ref}}-${{github.sha}}
-          restore-keys: |
-            godot.ios.template_release.double.arm64-4.6.1-stable-${{github.ref}}
-            godot.ios.template_release.double.arm64-4.6.1-stable
-
-      # Use python 3.x release (works cross platform; best to keep self contained in it's own step)
-      - name: Set up Python 3.x
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      # Setup scons, print python version and scons version info, so if anything is broken it won't run the build.
-      - name: Configuring Python packages
-        run: |
-          python -c "import sys; print(sys.version)"
-          python -m pip install scons
-          python --version
-          scons --version
-
-      # We should always be explicit with our flags usage here since it's gonna be sure to always set those flags
-      - name: Compilation
-        run: |
-          scons arch=arm64 verbose=yes warnings=extra werror=yes strict_checks=yes platform=ios target=template_release dev_build=no production=yes precision=double "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
-          
-      # Make build available
-      - uses: actions/upload-artifact@v4
-        with:
-          name: godot.ios.template_release.double.arm64
-          path: bin/libgodot.ios.template_release.double.arm64.a
