@@ -1,9 +1,9 @@
 name: 🐧 Linux Builds
 on:
   push:
-    branches: [ master ]
+    branches: [ ci ]
   pull_request:
-    branches: [ master ]
+    branches: [ ci ]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

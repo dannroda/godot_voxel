@@ -3,9 +3,9 @@
 name: ✂ Extension Strip Checks
 on:
   push:
-    branches: [ master ]
+    branches: [ ci ]
   pull_request:
-    branches: [ master ]
+    branches: [ ci ]
 
 concurrency:
   # Cancel in-progress builds when triggering new ones, to save resources.
