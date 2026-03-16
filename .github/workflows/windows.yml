@@ -12,7 +12,7 @@ concurrency:
 # Global Cache Settings
 # SCONS_CACHE for windows must be set in the build environment
 env:
-  GODOT_BASE_BRANCH: "4.6.1-stable"
+  GODOT_BASE_BRANCH: "4.6-stable"
   SCONS_CACHE_MSVC_CONFIG: true
   SCONS_CACHE_LIMIT_GB: 4
 
@@ -25,12 +25,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: 4.6.1 Editor Float64
+          - name: 4.6 Editor Float64
             target: editor
             precision: double
             executable_name: godot.windows.editor.double.x86_64.exe
 
-          - name: 4.6.1 Template
+          - name: 4.6 Template
             target: template_release
             precision: double
             executable_name: godot.windows.template_release.double.x86_64.exe
