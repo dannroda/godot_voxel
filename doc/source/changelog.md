@@ -7,7 +7,16 @@ At the moment, this module doesn't have a distinct release schedule, so this cha
 
 I try to minimize breaking changes, but there are usually a few in each release which I list in detail, so watch out for that section.
 
-Dev 1.6 - 04/02/2026 - tag `v1.6`
+Development - master branch
+-----------------------------
+
+- Fixes
+    - `VoxelBlockyModelFluid`: fixed fluid voxels below another fluid voxel were producing mesh collisions. They should never do because mesh collisions are for solid stuff.
+    - `VoxelInstanceLibraryMultimeshItem`: fixed mesh LOD distances did not scale properly with `lod_index` when using `VoxelLodTerrain` with the `Octree` streaming system
+    - Extension: fixed crash when expanding plugin resources in the inspector and other similar actions involving previews (see https://github.com/godotengine/godot-cpp/pull/1928)
+
+
+1.6 - 04/02/2026 - tag `v1.6`
 -----------------------------------
 
 - Improvements
