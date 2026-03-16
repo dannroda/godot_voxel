@@ -100,21 +100,12 @@ jobs:
 
           # --- Builds with artifacts ---
 
-          - name: 4.6 Editor
-            precision: single
-            target: editor
-            production: yes
-            executable_name: godot.linuxbsd.editor.x86_64
-            godot_base_branch: "4.6-stable"
-            warnings: extra
-            werror: yes
-
           - name: 4.6 Template
-            precision: single
+            precision: double
             target: template_release
             production: yes
-            executable_name: godot.linuxbsd.template_release.x86_64
-            godot_base_branch: "4.6-stable"
+            executable_name: godot.linuxbsd.template_release.double.x86_64
+            godot_base_branch: "4.6.1-stable"
             warnings: extra
             werror: yes
 
@@ -123,7 +114,7 @@ jobs:
             target: editor
             production: yes
             executable_name: godot.linuxbsd.editor.double.x86_64
-            godot_base_branch: "4.6-stable"
+            godot_base_branch: "4.6.1-stable"
             warnings: extra
             werror: yes
 
@@ -221,4 +212,3 @@ jobs:
         with:
           name: ${{matrix.executable_name}}
           path: bin/${{matrix.executable_name}}
-

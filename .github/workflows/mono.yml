@@ -11,7 +11,7 @@ concurrency:
 
 # Global Cache Settings
 env:
-  GODOT_BASE_BRANCH: "4.6-stable"
+  GODOT_BASE_BRANCH: "4.6.1-stable"
   SCONS_CACHE_LIMIT_GB: 4
 
 jobs:
@@ -78,13 +78,13 @@ jobs:
       # We should always be explicit with our flags usage here since it's gonna be sure to always set those flags
       - name: Compile Godot (module_mono_enabled=yes mono_glue=no)
         run: |
-          scons verbose=yes warnings=extra werror=yes strict_checks=yes platform=linuxbsd tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=no copy_mono_root=yes "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
+          scons verbose=yes warnings=extra werror=yes strict_checks=yes platform=linuxbsd tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=no precision=double copy_mono_root=yes "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
 
       - name: Generate Mono Glue
         run: |
-          ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue modules/mono/glue
+          ./bin/godot.linuxbsd.editor.double.x86_64.mono --headless --generate-mono-glue modules/mono/glue
         # run: |
-        #   xvfb-run ./bin/godot.linuxbsd.editor.x86_64.mono --headless --generate-mono-glue modules/mono/glue || true
+        #   xvfb-run ./bin/godot.linuxbsd.editor.double.x86_64.mono --headless --generate-mono-glue modules/mono/glue || true
 
       # Make glue available as artifact for dependent jobs
       - uses: actions/upload-artifact@v4
@@ -169,12 +169,12 @@ jobs:
       # We should always be explicit with our flags usage here since it's gonna be sure to always set those flags
       - name: Compilation
         run: |
-          scons verbose=yes warnings=extra werror=yes strict_checks=yes platform=linuxbsd tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=yes mono_static=yes copy_mono_root=yes "cache_path=${{github.workspace}}/.scons_cache/"  cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
+          scons verbose=yes warnings=extra werror=yes strict_checks=yes platform=linuxbsd tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=yes mono_static=yes copy_mono_root=yes precision=double "cache_path=${{github.workspace}}/.scons_cache/"  cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
 
       # Make build available
       - uses: actions/upload-artifact@v4
         with:
-          name: godot.linuxbsd.editor.x86_64.mono
+          name: godot.linuxbsd.editor.double.x86_64.mono
           path: bin/*
 
   windows-editor-mono:
@@ -262,16 +262,16 @@ jobs:
           SCONS_CACHE_MSVC_CONFIG: true
         run: |
           set PYTHONIOENCODING=utf8
-          scons verbose=yes warnings=extra voxel_werror=yes strict_checks=yes platform=windows tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=yes copy_mono_root=yes mono_static=yes "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
+          scons verbose=yes warnings=extra voxel_werror=yes strict_checks=yes platform=windows tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=yes copy_mono_root=yes mono_static=yes precision=double "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
 
       # TODO Enhancement: Run tests? Such tests are able to run from Godot 4.0 only
       # Execute unit tests for the editor
       #- name: Unit Tests
       #  run: |
-      #    ./bin/godot.windows.editor.x86_64.mono.exe --test
+      #    ./bin/godot.windows.editor.double.x86_64.mono.exe --test
 
       # Make build available
       - uses: actions/upload-artifact@v4
         with:
-          name: godot.windows.editor.x86_64.mono
+          name: godot.windows.editor.double.x86_64.mono
           path: bin/*

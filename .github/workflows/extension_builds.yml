@@ -8,7 +8,7 @@ on:
       float-precisions:
         required: false
         type: string
-        default: "['single']"
+        default: "['double']"
       
       godot-cpp-branch:
         required: false
