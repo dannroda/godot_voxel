@@ -1,0 +1,381 @@
+name: 🚀 Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Se activa con tags como v1.0.0, v1.2.3, etc.
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Variables de entorno globales para los trabajos de compilación.
+# Asegúrate de que GODOT_BASE_BRANCH apunte a la versión correcta de Godot para tu release.
+env:
+  GODOT_BASE_BRANCH: "4.6"
+  SCONS_CACHE_LIMIT_GB: 4
+
+jobs:
+  # ====================================================================
+  # 🐧 Linux Builds (de .github/workflows/linux.yml)
+  # ====================================================================
+  build-linux:
+    runs-on: "ubuntu-22.04"
+    name: 🐧 Linux ${{matrix.target}}
+    strategy:
+      matrix:
+        include:
+          - target: template_release
+            production: yes
+            executable_name: godot.linuxbsd.template_release.double.x86_64
+          - target: editor
+            production: yes
+            executable_name: godot.linuxbsd.editor.double.x86_64
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_BASE_BRANCH }}
+
+      # Este parche parece ser temporal. Puede que necesites eliminarlo en el futuro.
+      - name: Apply PR 117224
+        run: |
+          curl -LO https://github.com/godotengine/godot/pull/117224.patch
+          git apply 117224.patch
+
+      - uses: actions/checkout@v4
+        with:
+          path: modules/voxel
+
+      - name: Setup buildroot
+        run: |
+          wget https://github.com/godotengine/buildroot/releases/download/godot-2023.08.x-4/x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+          tar -xjf x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+          cd x86_64-godot-linux-gnu_sdk-buildroot
+          ./relocate-sdk.sh
+          cd ..
+
+      - name: Load .scons_cache directory
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/.scons_cache/
+          key: ${{matrix.executable_name}}-${{env.GODOT_BASE_BRANCH}}-${{github.ref}}-${{github.sha}}
+          restore-keys: |
+            ${{matrix.executable_name}}-${{env.GODOT_BASE_BRANCH}}-${{github.ref}}
+            ${{matrix.executable_name}}-${{env.GODOT_BASE_BRANCH}}
+
+      - name: Compilation
+        env:
+          SCONS_CACHE: ${{github.workspace}}/.scons_cache/
+          SCONS_CACHE_LIMIT: 4096
+        run: |
+          PATH=${GITHUB_WORKSPACE}/x86_64-godot-linux-gnu_sdk-buildroot/bin:$PATH
+          scons verbose=yes warnings=extra werror=yes strict_checks=yes platform=linuxbsd tests=no dev_build=no target=${{matrix.target}} production=${{matrix.production}} precision=double "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{matrix.executable_name}}
+          path: bin/${{matrix.executable_name}}
+
+  # ====================================================================
+  # 🚪 Windows Builds (de .github/workflows/windows.yml)
+  # ====================================================================
+  build-windows:
+    runs-on: "windows-latest"
+    name: 🚪 Windows ${{matrix.name}}
+    strategy:
+      matrix:
+        include:
+          - name: Editor Float64
+            target: editor
+            executable_name: godot.windows.editor.double.x86_64.exe
+          - name: Template
+            target: template_release
+            executable_name: godot.windows.template_release.double.x86_64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_BASE_BRANCH }}
+
+      - name: Apply PR 117224
+        run: |
+          curl -LO https://github.com/godotengine/godot/pull/117224.patch
+          git apply 117224.patch
+
+      - uses: actions/checkout@v4
+        with:
+          path: modules/voxel
+
+      - name: Load .scons_cache directory
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/.scons_cache/
+          key: ${{matrix.executable_name}}-${{env.GODOT_BASE_BRANCH}}-${{github.ref}}-${{github.sha}}
+          restore-keys: |
+            ${{matrix.executable_name}}-${{env.GODOT_BASE_BRANCH}}-${{github.ref}}
+            ${{matrix.executable_name}}-${{env.GODOT_BASE_BRANCH}}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Configuring Python packages
+        run: |
+          python -m pip install scons pywin32
+
+      - name: Add ANGLE
+        run: |
+          curl -LO "https://github.com/godotengine/godot-angle-static/releases/download/chromium%2F6601.2/godot-angle-static-x86_64-msvc-release.zip"
+          7z x godot-angle-static-x86_64-msvc-release.zip -oangle
+
+      - name: Add D3D12
+        run: |
+          python misc/scripts/install_d3d12_sdk_windows.py
+
+      - name: Compilation
+        env:
+          SCONS_CACHE_MSVC_CONFIG: true
+        run: |
+          set PYTHONIOENCODING=utf-8
+          scons verbose=yes warnings=extra voxel_werror=yes strict_checks=yes platform=windows tests=no target=${{matrix.target}} dev_build=no precision=double production=yes "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}} "angle_libs=${{github.workspace}}/angle" d3d12=yes
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{matrix.executable_name}}
+          path: bin/${{matrix.executable_name}}
+
+  # ====================================================================
+  # 🐒 Mono Builds (de .github/workflows/mono.yml)
+  # ====================================================================
+  build-mono-glue:
+    runs-on: "ubuntu-22.04"
+    name: 🐒 Generate Mono Glue
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_BASE_BRANCH }}
+      - name: Apply PR 117224
+        run: |
+          curl -LO https://github.com/godotengine/godot/pull/117224.patch
+          git apply 117224.patch
+      - uses: actions/checkout@v4
+        with:
+          path: modules/voxel
+      - name: Configure dependencies
+        run: sudo apt-get install build-essential pkg-config libx11-dev libxcursor-dev xvfb libxinerama-dev libgl1-mesa-dev libglu-dev libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev yasm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python -m pip install scons
+      - name: Compile Godot for glue generation
+        run: scons platform=linuxbsd target=editor module_mono_enabled=yes mono_glue=no precision=double
+      - name: Generate Mono Glue
+        run: ./bin/godot.linuxbsd.editor.double.x86_64.mono --headless --generate-mono-glue modules/mono/glue
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mono-glue
+          path: modules/mono/glue
+
+  build-linux-mono:
+    runs-on: "ubuntu-22.04"
+    name: 🐒 Linux Editor w/ Mono
+    needs: build-mono-glue
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_BASE_BRANCH }}
+      - name: Apply PR 117224
+        run: |
+          curl -LO https://github.com/godotengine/godot/pull/117224.patch
+          git apply 117224.patch
+      - uses: actions/checkout@v4
+        with:
+          path: modules/voxel
+      - name: Configure dependencies
+        run: sudo apt-get install build-essential pkg-config libx11-dev libxcursor-dev libxinerama-dev libgl1-mesa-dev libglu-dev libasound2-dev libpulse-dev libudev-dev libxi-dev libxrandr-dev yasm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python -m pip install scons
+      - uses: actions/download-artifact@v4
+        with:
+          name: mono-glue
+          path: modules/mono/glue
+      - run: ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin
+      - name: Compilation
+        run: scons platform=linuxbsd target=editor module_mono_enabled=yes mono_glue=yes mono_static=yes copy_mono_root=yes precision=double
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godot.linuxbsd.editor.double.x86_64.mono
+          path: bin/godot.linuxbsd.editor.double.x86_64.mono
+
+  build-windows-mono:
+    runs-on: "windows-latest"
+    name: 🐒 Windows Editor w/ Mono
+    needs: build-mono-glue
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_BASE_BRANCH }}
+      - name: Apply PR 117224
+        run: |
+          curl -LO https://github.com/godotengine/godot/pull/117224.patch
+          git apply 117224.patch
+      - uses: actions/checkout@v4
+        with:
+          path: modules/voxel
+      - run: mv modules/voxel/nuget.config ./nuget.config
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python -m pip install scons pywin32
+      - uses: actions/download-artifact@v4
+        with:
+          name: mono-glue
+          path: modules/mono/glue
+      - run: python ./modules/mono/build_scripts/build_assemblies.py --godot-output-dir=./bin
+      - run: python misc/scripts/install_d3d12_sdk_windows.py
+      - name: Compilation
+        run: scons platform=windows target=editor module_mono_enabled=yes mono_glue=yes mono_static=yes copy_mono_root=yes precision=double
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godot.windows.editor.double.x86_64.mono
+          path: bin/godot.windows.editor.double.x86_64.mono.exe
+
+  # ====================================================================
+  # 🍎 macOS Builds (de .github/workflows/macos.yml)
+  # ====================================================================
+  build-macos-arch:
+    runs-on: "macos-latest"
+    name: 🍎 macOS Build ${{matrix.arch}}
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+        target: [editor, template_release]
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_BASE_BRANCH }}
+      - name: Apply PR 117224
+        run: |
+          curl -LO https://github.com/godotengine/godot/pull/117224.patch
+          git apply 117224.patch
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+      - uses: actions/checkout@v4
+        with:
+          path: modules/voxel
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python -m pip install scons
+      - run: sh misc/scripts/install_vulkan_sdk_macos.sh
+      - name: Compilation
+        run: scons arch=${{matrix.arch}} platform=macos target=${{matrix.target}} production=yes precision=double
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godot.macos.${{matrix.target}}.${{matrix.arch}}
+          path: bin/godot.macos.${{matrix.target}}.double.${{matrix.arch}}
+
+  create-macos-universal:
+    needs: [build-macos-arch]
+    runs-on: "macos-latest"
+    name: 🍎 Create Universal Binaries
+    strategy:
+      matrix:
+        target: [editor, template_release]
+        name: [godot.macos.editor.double, godot.macos.template_release.double]
+
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: godot.macos.${{matrix.target}}.*
+          merge-multiple: true
+          path: bin
+      - name: Lipo bundle
+        run: lipo -create bin/godot.macos.${{matrix.target}}.double.x86_64 bin/godot.macos.${{matrix.target}}.double.arm64 -output bin/${{matrix.name}}.universal
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{matrix.name}}.universal
+          path: bin/${{matrix.name}}.universal
+
+  create-macos-bundles:
+    needs: [create-macos-universal]
+    runs-on: "macos-latest"
+    name: 🍎 Create App Bundles
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: godotengine/godot
+          ref: ${{ env.GODOT_BASE_BRANCH }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: godot.macos.*.universal
+          merge-multiple: true
+          path: bin
+      - name: Create editor .app bundle
+        run: |
+          cp -r misc/dist/macos_tools.app ./macos_editor.app
+          mkdir -p macos_editor.app/Contents/MacOS
+          cp bin/godot.macos.editor.double.universal macos_editor.app/Contents/MacOS/Godot
+          chmod +x macos_editor.app/Contents/MacOS/Godot
+          codesign --force --timestamp --options=runtime --entitlements misc/dist/macos/editor.entitlements -s - macos_editor.app
+          ditto -c -k --sequesterRsrc --keepParent macos_editor.app godot.macos.editor.app.zip
+      - name: Create macos template
+        run: |
+          cp -r misc/dist/macos_template.app ./macos_template.app
+          mkdir -p macos_template.app/Contents/MacOS
+          cp bin/godot.macos.template_release.double.universal macos_template.app/Contents/MacOS/godot_macos_release.universal
+          chmod +x macos_template.app/Contents/MacOS/godot_macos*
+          ditto -c -k --sequesterRsrc --keepParent macos_template.app godot.macos.template.app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godot.macos.editor.app.zip
+          path: godot.macos.editor.app.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: godot.macos.template.app.zip
+          path: godot.macos.template.app.zip
+
+  # ====================================================================
+  # 🚀 Publicación del Release
+  # ====================================================================
+  publish-release:
+    name: 🚀 Publish Release
+    runs-on: ubuntu-latest
+    needs:
+      - build-linux
+      - build-windows
+      - build-linux-mono
+      - build-windows-mono
+      - create-macos-bundles
+    permissions:
+      contents: write # Necesario para crear un release en el repositorio
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts # Descarga todos los artefactos a una carpeta llamada 'artifacts'
+
+      - name: Display structure of downloaded files
+        run: ls -R artifacts
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          body: "Release de la versión ${{ github.ref_name }}"
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/*/* # Sube todos los archivos de todas las subcarpetas de 'artifacts'

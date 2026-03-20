@@ -24,17 +24,17 @@ jobs:
         arch: [x86_64, arm64]
         target: [editor, template_release]
         include:
-          - name: 4.6.2-dev Editor Float64
+          - name: 4.6.2-stable Editor Float64
             target: editor
             precision: double
             executable_name: godot.macos.editor.double
-            godot_base_branch: "4.6"
+            godot_base_branch: "4.6.2-stable"
 
-          - name: 4.6.2-dev Template
+          - name: 4.6.2-stable Template
             target: template_release
             precision: double
             executable_name: godot.macos.template_release.double
-            godot_base_branch: "4.6"
+            godot_base_branch: "4.6.2-stable"
 
     steps:
       # Clone Godot
@@ -42,11 +42,6 @@ jobs:
         with:
           repository: godotengine/godot
           ref: ${{ matrix.godot_base_branch }}
-
-      - name: Apply PR 117224
-        run: |
-          curl -LO https://github.com/godotengine/godot/pull/117224.patch
-          git apply 117224.patch
 
       # Use more recent Xcode to fix build issues with MoltenVK
       # https://github.com/godotengine/godot/pull/108649
@@ -93,7 +88,7 @@ jobs:
       # We should always be explicit with our flags usage here since it's gonna be sure to always set those flags
       - name: Compilation
         run: |
-          scons arch=${{matrix.arch}} verbose=yes warnings=extra werror=yes strict_checks=yes platform=macos tests=no target=${{matrix.target}} dev_build=no production=yes precision=${{matrix.precision}} "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
+          scons arch=${{matrix.arch}} verbose=yes warnings=extra voxel_werror=yes strict_checks=yes platform=macos tests=no target=${{matrix.target}} dev_build=no production=yes precision=${{matrix.precision}} "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
           
       # Make build available
       - uses: actions/upload-artifact@v4
@@ -135,7 +130,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: godotengine/godot
-          ref: "4.6"
+          ref: "4.6.2-stable"
      
       - uses: actions/download-artifact@v4
         with:

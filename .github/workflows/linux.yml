@@ -21,21 +21,21 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: 4.6.2-dev Template
+          - name: 4.6.2-stable Template
             precision: double
             target: template_release
             production: yes
             executable_name: godot.linuxbsd.template_release.double.x86_64
-            godot_base_branch: "4.6"
+            godot_base_branch: "4.6.2-stable"
             warnings: extra
             werror: yes
 
-          - name: 4.6.2-dev Editor Float64
+          - name: 4.6.2-stable Editor Float64
             precision: double
             target: editor
             production: yes
             executable_name: godot.linuxbsd.editor.double.x86_64
-            godot_base_branch: "4.6"
+            godot_base_branch: "4.6.2-stable"
             warnings: extra
             werror: yes
 
@@ -45,11 +45,6 @@ jobs:
         with:
           repository: godotengine/godot
           ref: ${{ matrix.godot_base_branch }}
-
-      - name: Apply PR 117224
-        run: |
-          curl -LO https://github.com/godotengine/godot/pull/117224.patch
-          git apply 117224.patch
 
       # Clone our module under the correct directory
       - uses: actions/checkout@v4
@@ -130,7 +125,7 @@ jobs:
           SCONS_CACHE_LIMIT: 4096
         run: |
           PATH=${GITHUB_WORKSPACE}/x86_64-godot-linux-gnu_sdk-buildroot/bin:$PATH
-          scons verbose=yes warnings=${{matrix.warnings}} werror=${{matrix.werror}} strict_checks=yes platform=linuxbsd tests=no dev_build=no target=${{matrix.target}} production=${{matrix.production}} precision=${{matrix.precision}} "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
+          scons verbose=yes warnings=${{matrix.warnings}} voxel_werror=${{matrix.werror}} strict_checks=yes platform=linuxbsd tests=no dev_build=no target=${{matrix.target}} production=${{matrix.production}} precision=${{matrix.precision}} "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
 
       # Make build available
       - uses: actions/upload-artifact@v4

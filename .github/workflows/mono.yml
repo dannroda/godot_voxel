@@ -11,7 +11,7 @@ concurrency:
 
 # Global Cache Settings
 env:
-  GODOT_BASE_BRANCH: "4.6"
+  GODOT_BASE_BRANCH: "4.6.2-stable"
   SCONS_CACHE_LIMIT_GB: 4
 
 jobs:
@@ -26,11 +26,6 @@ jobs:
         with:
           repository: godotengine/godot
           ref: ${{ env.GODOT_BASE_BRANCH }}
-
-      - name: Apply PR 117224
-        run: |
-          curl -LO https://github.com/godotengine/godot/pull/117224.patch
-          git apply 117224.patch
 
       # Clone our module under the correct directory
       - uses: actions/checkout@v4
@@ -83,7 +78,7 @@ jobs:
       # We should always be explicit with our flags usage here since it's gonna be sure to always set those flags
       - name: Compile Godot (module_mono_enabled=yes mono_glue=no)
         run: |
-          scons verbose=yes warnings=extra werror=yes strict_checks=yes platform=linuxbsd tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=no precision=double copy_mono_root=yes "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
+          scons verbose=yes warnings=extra voxel_werror=yes strict_checks=yes platform=linuxbsd tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=no precision=double copy_mono_root=yes "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
 
       - name: Generate Mono Glue
         run: |
@@ -111,11 +106,6 @@ jobs:
         with:
           repository: godotengine/godot
           ref: ${{ env.GODOT_BASE_BRANCH }}
-
-      - name: Apply PR 117224
-        run: |
-          curl -LO https://github.com/godotengine/godot/pull/117224.patch
-          git apply 117224.patch
 
       # Clone our module under the correct directory
       - uses: actions/checkout@v4
@@ -179,7 +169,7 @@ jobs:
       # We should always be explicit with our flags usage here since it's gonna be sure to always set those flags
       - name: Compilation
         run: |
-          scons verbose=yes warnings=extra werror=yes strict_checks=yes platform=linuxbsd tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=yes mono_static=yes copy_mono_root=yes precision=double "cache_path=${{github.workspace}}/.scons_cache/"  cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
+          scons verbose=yes warnings=extra voxel_werror=yes strict_checks=yes platform=linuxbsd tests=no target=editor dev_build=no debug_symbols=no module_mono_enabled=yes mono_glue=yes mono_static=yes copy_mono_root=yes precision=double "cache_path=${{github.workspace}}/.scons_cache/"  cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
 
       # Make build available
       - uses: actions/upload-artifact@v4
@@ -199,11 +189,6 @@ jobs:
         with:
           repository: godotengine/godot
           ref: ${{ env.GODOT_BASE_BRANCH }}
-
-      - name: Apply PR 117224
-        run: |
-          curl -LO https://github.com/godotengine/godot/pull/117224.patch
-          git apply 117224.patch
 
       # The version of ThorVG in 4.3-stable hits an error in latest MSVC (see godot#95861).
       # We should no longer need this in 4.3.1 and later.
