@@ -53,18 +53,30 @@ jobs:
 
       # Setup custom buildroot so we may use an old but compatible GLIBC version, while keeping recent toolchain.
       # This allows to make production builds that are compatible with older Linux distros.
-      # TODO Enhancement: cache buildroot so future runs can use it?
-      # TODO Enhancement: make buildroot setup a self-contained step. There are bits of setup elsewhere.
-      #      Currently I also setup `PATH` in the Compilation step because modifications
-      #      do not persist between steps (?). I also placed this step after checkout because the checkout step changes
-      #      the working directory for all following steps.
+      - name: Cache buildroot
+        id: cache-buildroot
+        uses: actions/cache@v4
+        with:
+          path: ${{github.workspace}}/x86_64-godot-linux-gnu_sdk-buildroot
+          key: buildroot-godot-2023.08.x-4
+
       - name: Setup buildroot
+        if: steps.cache-buildroot.outputs.cache-hit != 'true'
         run: |
           wget https://github.com/godotengine/buildroot/releases/download/godot-2023.08.x-4/x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
           tar -xjf x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
           cd x86_64-godot-linux-gnu_sdk-buildroot
           ./relocate-sdk.sh
           cd ..
+          rm x86_64-godot-linux-gnu_sdk-buildroot.tar.bz2
+
+      - name: Configure PATH for buildroot
+        run: echo "${GITHUB_WORKSPACE}/x86_64-godot-linux-gnu_sdk-buildroot/bin" >> $GITHUB_PATH
+
+      - name: Install wayland dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwayland-bin
 
       # [Already provided by the custom buildroot]
       # Azure repositories are not reliable, we need to prevent azure giving us packages.
@@ -124,7 +136,6 @@ jobs:
           # I wish I could do `SCONS_CACHE_LIMIT_GB * 1024` but it isn't documented as an available operator
           SCONS_CACHE_LIMIT: 4096
         run: |
-          PATH=${GITHUB_WORKSPACE}/x86_64-godot-linux-gnu_sdk-buildroot/bin:$PATH
           scons verbose=yes warnings=${{matrix.warnings}} voxel_werror=${{matrix.werror}} strict_checks=yes platform=linuxbsd tests=no dev_build=no target=${{matrix.target}} production=${{matrix.production}} precision=${{matrix.precision}} "cache_path=${{github.workspace}}/.scons_cache/" cache_limit=${{env.SCONS_CACHE_LIMIT_GB}}
 
       # Make build available
